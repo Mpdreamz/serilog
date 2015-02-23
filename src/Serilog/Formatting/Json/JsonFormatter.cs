@@ -324,7 +324,14 @@ namespace Serilog.Formatting.Json
             WriteString(value.ToString(), output);
         }
 
-        void WriteLiteral(object value, TextWriter output, bool forceQuotation = false)
+        /// <summary>
+        /// Write value as literal value, takes configured literal writers into account.
+        /// Writes null if value is null
+        /// </summary>
+        /// <param name="value">The value to be written as a json construct</param>
+        /// <param name="output">The writer to write on</param>
+        /// <param name="forceQuotation">force quotation on the writtern value</param>
+        protected void WriteLiteral(object value, TextWriter output, bool forceQuotation = false)
         {
             if (value == null)
             {

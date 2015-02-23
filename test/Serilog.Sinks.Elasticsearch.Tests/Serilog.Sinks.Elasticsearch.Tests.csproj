@@ -62,7 +62,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Discrepancies\JsonNetSerializerTests.cs" />
+    <Compile Include="Discrepancies\ElasticsearchDefaultSerializerTests.cs" />
+    <Compile Include="Domain\BulkAction.cs" />
     <Compile Include="ElasticsearchSinkTestsBase.cs" />
+    <Compile Include="Discrepancies\DefaultSerializerTests.cs" />
     <Compile Include="InlineFieldsTests.cs" />
     <Compile Include="IndexDeciderTests.cs" />
     <Compile Include="RealExceptionNoSerializerTests.cs" />

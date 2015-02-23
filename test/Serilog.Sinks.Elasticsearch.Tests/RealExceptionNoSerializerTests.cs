@@ -56,7 +56,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests
 
                 //We have no serializer associated with the sink so we expect the forced ToString() of scalar values
                 bulkJsonPieces[3].Should().Contain("Complex\":\"{");
-                bulkJsonPieces[3].Should().Contain("exception\":\"System.Net.Http.HttpRequestException: An error");
+                bulkJsonPieces[3].Should().Contain("exception\":{\"Message\":\"System.Net.Http.HttpRequestException: An error");
             }
         }
     }
