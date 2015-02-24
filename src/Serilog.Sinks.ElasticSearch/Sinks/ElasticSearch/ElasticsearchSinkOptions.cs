@@ -12,7 +12,7 @@ namespace Serilog.Sinks.ElasticSearch
     /// <summary>
     /// Provides ElasticsearchSink with configurable options
     /// </summary>
-    public class ElasticsearchSinkOptions
+    public class ElasticsearchSinkOptions 
     {
         ///<summary>
         /// Connection configuration to use for connecting to the cluster.

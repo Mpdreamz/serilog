@@ -78,21 +78,14 @@ namespace Serilog.Sinks.ElasticSearch
         /// </summary>
         protected override void WriteException(Exception exception, ref string delim, TextWriter output)
         {
+            output.Write(delim);
+            output.Write("\"");
+            output.Write("exceptions");
+            output.Write("\":[");
 
-
-            if (this._serializer == null)
-            {
-                output.Write(delim);
-                output.Write("\"");
-                output.Write("exceptions");
-                output.Write("\":[");
-
-                delim = "";
-                this.WriteExceptionSerializationInfo(exception, ref delim, output, depth: 0);
-                output.Write("]");
-            }
-            else
-                WriteJsonProperty("exception", exception, ref delim, output);
+            delim = "";
+            this.WriteExceptionSerializationInfo(exception, ref delim, output, depth: 0);
+            output.Write("]");
         }
 
         private void WriteExceptionSerializationInfo(Exception exception, ref string delim, TextWriter output, int depth)
@@ -111,6 +104,9 @@ namespace Serilog.Sinks.ElasticSearch
             var source = si.GetString("Source");
             var className = si.GetString("ClassName");
             var watsonBuckets = si.GetValue("WatsonBuckets", typeof(byte[])) as byte[];
+
+            //TODO Loop over ISerializable data
+
             output.Write(delim);
             output.Write("{");
             delim = "";
@@ -118,13 +114,18 @@ namespace Serilog.Sinks.ElasticSearch
             this.WriteJsonProperty("ClassName", className, ref delim, output);
             this.WriteJsonProperty("Message", exception.Message, ref delim, output);
             this.WriteJsonProperty("Source", source, ref delim, output);
-            this.WriteJsonProperty("StrackTraceString", stackTrace, ref delim, output);
+            this.WriteJsonProperty("StackTraceString", stackTrace, ref delim, output);
             this.WriteJsonProperty("RemoteStackTraceString", remoteStackTrace, ref delim, output);
             this.WriteJsonProperty("RemoteStackIndex", remoteStackIndex, ref delim, output);
             this.WriteJsonProperty("ExceptionMethod", exceptionMethod, ref delim, output);
             this.WriteJsonProperty("HResult", hresult, ref delim, output);
             this.WriteJsonProperty("HelpURL", helpUrl, ref delim, output);
-            this.WriteJsonProperty("WatsonBuckets", watsonBuckets, ref delim, output);
+            
+            //writing byte[] will fall back to serializer and they differ in output 
+            //JsonNET assumes string, simplejson writes array of numerics.
+            //Skip for now
+            //this.WriteJsonProperty("WatsonBuckets", watsonBuckets, ref delim, output);
+
             output.Write("}");
             delim = ",";
             if (exception.InnerException != null)

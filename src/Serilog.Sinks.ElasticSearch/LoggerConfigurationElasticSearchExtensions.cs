@@ -15,6 +15,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Net.Configuration;
 using Elasticsearch.Net.Connection;
 using Elasticsearch.Net.Serialization;
 using Serilog.Configuration;
@@ -181,6 +182,14 @@ namespace Serilog
         /// <returns></returns>
         public static LoggerConfiguration Elasticsearch(this LoggerSinkConfiguration loggerSinkConfiguration, ElasticsearchSinkOptions options = null)
         {
+            //TODO register mappings via bool parameter
+            //TODO make sure we do not kill appdata injection
+            //TODO delete the old ElasticSearch extension methods
+            //TODO also serialize top most exception as "exception"
+            //TODO configure max inner exceptions ?
+            //TODO handle bulk errors and write to self log, what does logstash do in this case?
+            //TODO NEST trace logging ID's to corrolate requests to eachother
+            //Deal with positional formatting in fields property  (default to scalar string in mapping)
             options = options ?? new ElasticsearchSinkOptions(new [] { new Uri("http://localhost:9200") });
             var sink = new ElasticsearchSink(options);
             return loggerSinkConfiguration.Sink(sink, options.MinimumLogEventLevel ?? LevelAlias.Minimum);

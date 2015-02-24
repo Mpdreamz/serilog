@@ -47,13 +47,13 @@ namespace Serilog.Sinks.Elasticsearch.Tests
         /// </summary>
         /// <param name="expectedCount"></param>
         /// <returns></returns>
-        protected IList<SerilogElasticsearchMessage> GetPostedLogEvents(int expectedCount)
+        protected IList<SerilogElasticsearchEvent> GetPostedLogEvents(int expectedCount)
         {
             this._seenHttpPosts.Should().NotBeNullOrEmpty();
             var totalBulks = this._seenHttpPosts.SelectMany(p=>p.Split(new []{"\n"}, StringSplitOptions.RemoveEmptyEntries)).ToList();
             totalBulks.Should().NotBeNullOrEmpty().And.HaveCount(expectedCount*2);
 
-            var bulkActions = new List<SerilogElasticsearchMessage>();
+            var bulkActions = new List<SerilogElasticsearchEvent>();
             for (var i = 0; i < totalBulks.Count; i += 2)
             {
                 BulkOperation action;
@@ -69,10 +69,10 @@ namespace Serilog.Sinks.Elasticsearch.Tests
                 action.IndexAction.Index.Should().NotBeNullOrEmpty().And.StartWith("logstash-");
                 action.IndexAction.Type.Should().NotBeNullOrEmpty().And.Be("logevent");
 
-                SerilogElasticsearchMessage actionMetaData;
+                SerilogElasticsearchEvent actionMetaData;
                 try
                 {
-                    actionMetaData = this.Deserialize<SerilogElasticsearchMessage>(totalBulks[i + 1]);
+                    actionMetaData = this.Deserialize<SerilogElasticsearchEvent>(totalBulks[i + 1]);
                 }
                 catch (Exception e)
                 {

@@ -15,14 +15,15 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Domain
     /// {operationmetadata}\n
     /// This provides a marker interface for both
     /// </summary>
-    interface IBulkObject { }
+    interface IBulkData { }
 
-    class BulkOperation : IBulkObject
+    public class BulkOperation : IBulkData
     {
         [JsonProperty("index")]
         public IndexAction IndexAction { get; set; }
     }
-    class IndexAction
+
+    public class IndexAction
     {
         [JsonProperty("_index")]
         public string Index { get; set; }
@@ -30,7 +31,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Domain
         public string Type { get; set; }
     }
 
-    public class SerilogElasticsearchMessage : IBulkObject
+    public class SerilogElasticsearchEvent : IBulkData
     {
         [JsonProperty("@timestamp")]
         public DateTime Timestamp { get; set; }
@@ -46,12 +47,26 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Domain
         public string Message { get; set; }
 
         [JsonProperty("exceptions")]
-        public List<SerilogElasticsearchException> Exceptions { get; set; }
+        public List<SerilogElasticsearchExceptionInfo> Exceptions { get; set; }
     }
 
-    public class SerilogElasticsearchException
+    public class SerilogElasticsearchExceptionInfo
     {
-        [JsonProperty("Message")]
+        public int Depth { get; set; }
+        public string ClassName { get; set; }
         public string Message { get; set; }
+        public string Source { get; set; }
+        public string StackTraceString { get; set; }
+        public string RemoteStackTraceString { get; set; }
+        public int RemoteStackIndex { get; set; }
+        public string ExceptionMethod { get; set; }
+        public int HResult { get; set; }
+        public string HelpUrl { get; set; }
+        
+        //writing byte[] will fall back to serializer and they differ in output 
+        //JsonNET assumes string, simplejson writes array of numerics.
+        //Skip for now
+            
+        //public byte[] WatsonBuckets { get; set; }
     }
 }
