@@ -60,6 +60,8 @@ namespace Serilog.Sinks.ElasticSearch
         /// </summary>
         public const int DefaultConnectionTimeout = 5000;
 
+        private readonly bool _registerTemplateOnStartup;
+
         /// <summary>
         /// Creates a new ElasticsearchSink instance with the provided options
         /// </summary>
@@ -82,12 +84,74 @@ namespace Serilog.Sinks.ElasticSearch
                 serializer: options.Serializer,
                 inlineFields: options.InlineFields
             );
+            this._registerTemplateOnStartup = options.RegisterTemplate;
         }
 
         Func<LogEvent, DateTimeOffset, string> DefaultIndexDecider(string indexFormat)
         {
             var closedIndexFormat = !string.IsNullOrWhiteSpace(indexFormat) ? indexFormat : DefaultIndexFormat;
             return (@event, offset) => string.Format(closedIndexFormat, offset);
+        }
+
+
+        /// <summary>
+        /// Register the elasticsearch index template if the provided options mandate it.
+        /// </summary>
+        public void RegisterTemplateIfNeeded()
+        {
+            if (!this._registerTemplateOnStartup) return;
+            var result = this._client.IndicesPutTemplateForAll<VoidResponse>("serilog-events-template", new
+            {
+                template = "logstash-*",
+                settings = new Dictionary<string, string>
+                {
+                    {"index.refresh_interval", "5s"}
+                },
+                mappings = new
+                {
+                    _default_ = new
+                    {
+                        _all = new { enabled = true },
+                        dynamic_templates = new[] 
+                        {
+                            new 
+                            {
+                                string_fields = new 
+                                {
+                                    match = "*",
+                                    match_mapping_type = "string",
+                                    mapping = new 
+                                    {
+                                        type = "string", index = "analyzed", omit_norms = true,
+                                        fields = new 
+                                        {
+                                            raw = new
+                                            {
+                                                type= "string", index = "not_analyzed", ignore_above = 256
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        properties = new Dictionary<string, object>
+                        {
+                            { "message", new { type = "string", index =  "analyzed" } },
+                            { "exceptions", new
+                            {
+                                type = "nested", properties =  new Dictionary<string, object>
+                                {
+                                    { "Depth", new { type = "integer" } },
+                                    { "RemoteStackIndex", new { type = "integer" } },
+                                    { "HResult", new { type = "integer" } },
+                                    { "StackTraceString", new { type = "string", index = "analyzed" } },
+                                    { "RemoteStackTraceString", new { type = "string", index = "analyzed" } },
+                                }
+                            } }
+                        }
+                    }
+                }
+            });
         }
 
         /// <summary>

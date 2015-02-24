@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
 using Elasticsearch.Net.Serialization;
@@ -117,7 +120,7 @@ namespace Serilog.Sinks.ElasticSearch
             this.WriteJsonProperty("StackTraceString", stackTrace, ref delim, output);
             this.WriteJsonProperty("RemoteStackTraceString", remoteStackTrace, ref delim, output);
             this.WriteJsonProperty("RemoteStackIndex", remoteStackIndex, ref delim, output);
-            this.WriteJsonProperty("ExceptionMethod", exceptionMethod, ref delim, output);
+            this.WriteStructuredExceptionMethod(exceptionMethod, ref delim, output);
             this.WriteJsonProperty("HResult", hresult, ref delim, output);
             this.WriteJsonProperty("HelpURL", helpUrl, ref delim, output);
             
@@ -130,6 +133,34 @@ namespace Serilog.Sinks.ElasticSearch
             delim = ",";
             if (exception.InnerException != null && depth < 20)
                 this.WriteExceptionSerializationInfo(exception.InnerException, ref delim, output, ++depth);
+        }
+
+
+        private void WriteStructuredExceptionMethod(string exceptionMethodString, ref string delim, TextWriter output) {
+            var args = exceptionMethodString.Split('\0', '\n');
+
+            if (args.Length!=5) return;
+
+            var memberType = Int32.Parse(args[0], CultureInfo.InvariantCulture);
+            var name = args[1];
+            var assemblyName = args[2];
+            var className = args[3];
+            var signature = args[4];
+            var an = new AssemblyName(assemblyName);
+            output.Write(delim);
+            output.Write("\"");
+            output.Write("ExceptionMethod");
+            output.Write("\":{");
+            delim = "";
+            this.WriteJsonProperty("Name", name, ref delim, output);
+            this.WriteJsonProperty("AssemblyName", an.Name, ref delim, output);
+            this.WriteJsonProperty("AssemblyVersion", an.Version.ToString(), ref delim, output);
+            this.WriteJsonProperty("AssemblyCulture", an.CultureName, ref delim, output);
+            this.WriteJsonProperty("ClassName", className, ref delim, output);
+            this.WriteJsonProperty("Signature", signature, ref delim, output);
+            this.WriteJsonProperty("MemberType", memberType, ref delim, output);
+            output.Write("}");
+            delim = ",";
         }
 
 

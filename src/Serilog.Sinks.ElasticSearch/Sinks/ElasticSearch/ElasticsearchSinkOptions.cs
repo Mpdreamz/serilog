@@ -14,6 +14,13 @@ namespace Serilog.Sinks.ElasticSearch
     /// </summary>
     public class ElasticsearchSinkOptions 
     {
+
+        /// <summary>
+        /// When set to true the sink will register an index template for the logs in elasticsearch.
+        /// This template is optimized to deal with serilog events
+        /// </summary>
+        public bool RegisterTemplate { get; set; }
+
         ///<summary>
         /// Connection configuration to use for connecting to the cluster.
         /// </summary>

@@ -25,8 +25,15 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Discrepancies
             {
                 try
                 {
-                    var innerException = new NastyException("nasty inner exception");
-                    throw new Exception(exceptionMessage, innerException);
+                    try
+                    {
+                        throw new Exception("inner most exception");
+                    }
+                    catch (Exception e)
+                    {
+                        var innerException = new NastyException("nasty inner exception", e);
+                        throw new Exception(exceptionMessage, innerException);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -42,9 +49,17 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Discrepancies
             Console.WriteLine("BULK OUTPUT END ============");
 
             var firstEvent = postedEvents[0];
-            firstEvent.Exceptions.Should().NotBeNull().And.HaveCount(2);
+            firstEvent.Exceptions.Should().NotBeNull().And.HaveCount(3);
             firstEvent.Exceptions[0].Message.Should().NotBeNullOrWhiteSpace()
                 .And.Be(exceptionMessage);
+            var realException = firstEvent.Exceptions[0];
+            realException.ExceptionMethod.Should().NotBeNull();
+            realException.ExceptionMethod.Name.Should().NotBeNullOrWhiteSpace();
+            realException.ExceptionMethod.AssemblyName.Should().NotBeNullOrWhiteSpace();
+            realException.ExceptionMethod.AssemblyVersion.Should().NotBeNullOrWhiteSpace();
+            realException.ExceptionMethod.ClassName.Should().NotBeNullOrWhiteSpace();
+            realException.ExceptionMethod.Signature.Should().NotBeNullOrWhiteSpace();
+            realException.ExceptionMethod.MemberType.Should().BeGreaterThan(0);
 
             var nastyException = firstEvent.Exceptions[1];
             nastyException.Depth.Should().Be(1);
@@ -83,7 +98,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Discrepancies
             info.AddValue("HResult", 123123);
             info.AddValue("Source", "source");
             info.AddValue("ClassName", "classname nasty exception");
-            info.AddValue("WatsonBuckets", new byte[] {1,2,3}, typeof(byte[]));
+            info.AddValue("WatsonBuckets", new byte[] { 1, 2, 3 }, typeof(byte[]));
         }
     }
 }

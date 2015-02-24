@@ -59,7 +59,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Domain
         public string StackTraceString { get; set; }
         public string RemoteStackTraceString { get; set; }
         public int RemoteStackIndex { get; set; }
-        public string ExceptionMethod { get; set; }
+        public SerilogExceptionMethodInfo ExceptionMethod { get; set; }
         public int HResult { get; set; }
         public string HelpUrl { get; set; }
         
@@ -68,5 +68,16 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Domain
         //Skip for now
             
         //public byte[] WatsonBuckets { get; set; }
+    }
+
+    public class SerilogExceptionMethodInfo
+    {
+        public string Name { get; set; }
+        public string AssemblyName { get; set; }
+        public string AssemblyVersion { get; set; }
+        public string AssemblyCulture { get; set; }
+        public string ClassName { get; set; }
+        public string Signature { get; set; }
+        public int MemberType { get; set; }
     }
 }
