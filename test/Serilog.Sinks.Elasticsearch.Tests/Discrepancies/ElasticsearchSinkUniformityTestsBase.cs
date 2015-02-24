@@ -47,6 +47,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests.Discrepancies
                 .And.Be(exceptionMessage);
 
             var nastyException = firstEvent.Exceptions[1];
+            nastyException.Depth.Should().Be(1);
             nastyException.Message.Should().Be("nasty inner exception");
             nastyException.HelpUrl.Should().Be("help url");
             nastyException.StackTraceString.Should().Be("stack trace string");

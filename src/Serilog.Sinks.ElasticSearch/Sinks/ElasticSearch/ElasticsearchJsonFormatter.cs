@@ -128,7 +128,7 @@ namespace Serilog.Sinks.ElasticSearch
 
             output.Write("}");
             delim = ",";
-            if (exception.InnerException != null)
+            if (exception.InnerException != null && depth < 20)
                 this.WriteExceptionSerializationInfo(exception.InnerException, ref delim, output, ++depth);
         }
 
