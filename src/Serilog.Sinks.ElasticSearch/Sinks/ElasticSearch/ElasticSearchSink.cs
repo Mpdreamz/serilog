@@ -22,6 +22,7 @@ using Elasticsearch.Net.Serialization;
 using Serilog.Events;
 using Serilog.Sinks.PeriodicBatching;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Serilog.Sinks.ElasticSearch
 {
@@ -35,47 +36,34 @@ namespace Serilog.Sinks.ElasticSearch
         readonly ElasticsearchClient _client;
         readonly Func<LogEvent, DateTimeOffset, string> _indexDecider;
 
-        /// <summary>
-        /// A reasonable default for the number of events posted in each batch.
-        /// </summary>
-        public const int DefaultBatchPostingLimit = 50;
-
-        /// <summary>
-        /// A reasonable default time to wait between checking for event batches.
-        /// </summary>
-        public static readonly TimeSpan DefaultPeriod = TimeSpan.FromSeconds(2);
-
-        /// <summary>
-        /// Default to the Logstash index name format
-        /// </summary>
-        public const string DefaultIndexFormat = "logstash-{0:yyyy.MM.dd}";
-
-        /// <summary>
-        /// Defaults to the type of logevent
-        /// </summary>
-        public const string DefaultTypeName = "logevent";
-
-        /// <summary>
-        /// Default connection timeout in milliseconds
-        /// </summary>
-        public const int DefaultConnectionTimeout = 5000;
-
         private readonly bool _registerTemplateOnStartup;
+        private readonly string _templateName;
+        private readonly string _templateMatchString;
+        private static readonly Regex IndexFormatRegex = new Regex(@"^(.*)(?:\{0\:.+\})(.*)$");
 
         /// <summary>
         /// Creates a new ElasticsearchSink instance with the provided options
         /// </summary>
-        /// <param name="options">Options configuring how the sink behaves</param>
+        /// <param name="options">Options configuring how the sink behaves, may NOT be null</param>
         public ElasticsearchSink(ElasticsearchSinkOptions options)
-            : base(options.BatchPostingLimit ?? DefaultBatchPostingLimit, options.Period ?? DefaultPeriod)
+            : base(options.BatchPostingLimit, options.Period)
         {
-            _indexDecider = options.IndexDecider ?? DefaultIndexDecider(options.IndexFormat);
-            _typeName = !string.IsNullOrWhiteSpace(options.TypeName) ? options.TypeName : DefaultTypeName;
+            if (string.IsNullOrWhiteSpace(options.IndexFormat)) throw new ArgumentException("options.IndexFormat");
+            if (string.IsNullOrWhiteSpace(options.TypeName)) throw new ArgumentException("options.TypeName");
+            if (string.IsNullOrWhiteSpace(options.TemplateName)) throw new ArgumentException("options.TemplateName");
+            this._templateName = options.TemplateName;
+            this._templateMatchString = IndexFormatRegex.Replace(options.IndexFormat, @"$1*$2");
+            
+            _indexDecider = options.IndexDecider ?? ((@event, offset) => string.Format(options.IndexFormat, offset));
+            _typeName = options.TypeName;
+
             var configuration = new ConnectionConfiguration(options.ConnectionPool)
-                .SetTimeout(DefaultConnectionTimeout)
+                .SetTimeout(5000)
                 .SetMaximumAsyncConnections(20);
+
             if (options.ModifyConnectionSetttings != null)
                 configuration = options.ModifyConnectionSetttings(configuration);
+
             _client = new ElasticsearchClient(configuration, connection: options.Connection, serializer: options.Serializer);
             _formatter = new ElasticsearchJsonFormatter(
                 formatProvider: options.FormatProvider,
@@ -84,13 +72,13 @@ namespace Serilog.Sinks.ElasticSearch
                 serializer: options.Serializer,
                 inlineFields: options.InlineFields
             );
-            this._registerTemplateOnStartup = options.RegisterTemplate;
+
+            this._registerTemplateOnStartup = options.AutoRegisterTemplate;
         }
 
         Func<LogEvent, DateTimeOffset, string> DefaultIndexDecider(string indexFormat)
         {
-            var closedIndexFormat = !string.IsNullOrWhiteSpace(indexFormat) ? indexFormat : DefaultIndexFormat;
-            return (@event, offset) => string.Format(closedIndexFormat, offset);
+            return (@event, offset) => string.Format(indexFormat, offset);
         }
 
 
@@ -100,9 +88,9 @@ namespace Serilog.Sinks.ElasticSearch
         public void RegisterTemplateIfNeeded()
         {
             if (!this._registerTemplateOnStartup) return;
-            var result = this._client.IndicesPutTemplateForAll<VoidResponse>("serilog-events-template", new
+            var result = this._client.IndicesPutTemplateForAll<VoidResponse>(this._templateName, new
             {
-                template = "logstash-*",
+                template = this._templateMatchString,
                 settings = new Dictionary<string, string>
                 {
                     {"index.refresh_interval", "5s"}
@@ -146,6 +134,13 @@ namespace Serilog.Sinks.ElasticSearch
                                     { "HResult", new { type = "integer" } },
                                     { "StackTraceString", new { type = "string", index = "analyzed" } },
                                     { "RemoteStackTraceString", new { type = "string", index = "analyzed" } },
+                                    { "ExceptionMessage", new
+                                    {
+                                        type = "object", properties = new Dictionary<string, object>
+                                        {
+                                            { "MemberType", new { type = "integer" } },
+                                        }
+                                    }}
                                 }
                             } }
                         }

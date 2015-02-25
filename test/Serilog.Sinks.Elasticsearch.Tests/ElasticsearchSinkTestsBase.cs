@@ -20,6 +20,7 @@ namespace Serilog.Sinks.Elasticsearch.Tests
         protected readonly IConnection _connection;
         protected readonly ElasticsearchSinkOptions _options;
         protected readonly List<string> _seenHttpPosts = new List<string>();
+        protected readonly List<Tuple<Uri, string>> _seenHttpPuts = new List<Tuple<Uri, string>>();
         private ElasticsearchJsonNetSerializer _serializer;
 
         protected ElasticsearchSinkTestsBase()
@@ -33,6 +34,13 @@ namespace Serilog.Sinks.Elasticsearch.Tests
                 Period = TinyWait,
                 Connection = _connection
             };
+            A.CallTo(() => _connection.PutSync(A<Uri>._, A<byte[]>._, A<IRequestConfiguration>._))
+                .ReturnsLazily((Uri uri, byte[] postData, IRequestConfiguration requestConfiguration) =>
+                {
+                    var fixedRespone = new MemoryStream(Encoding.UTF8.GetBytes(@"{ ""ok"": true }"));
+                    _seenHttpPuts.Add(Tuple.Create(uri, Encoding.UTF8.GetString(postData)));
+                    return ElasticsearchResponse<Stream>.Create(new ConnectionConfiguration(), 200, "PUT", "/", postData, fixedRespone);
+                });
             A.CallTo(() => _connection.PostSync(A<Uri>._, A<byte[]>._, A<IRequestConfiguration>._))
                 .ReturnsLazily((Uri uri, byte[] postData, IRequestConfiguration requestConfiguration) =>
                 {

@@ -39,7 +39,9 @@ namespace Serilog
         /// <param name="loggerSinkConfiguration"></param>
         /// <param name="options">Provides options specific to the Elasticsearch sink</param>
         /// <returns></returns>
-        public static LoggerConfiguration Elasticsearch(this LoggerSinkConfiguration loggerSinkConfiguration, ElasticsearchSinkOptions options = null)
+        public static LoggerConfiguration Elasticsearch(
+            this LoggerSinkConfiguration loggerSinkConfiguration, 
+            ElasticsearchSinkOptions options = null)
         {
             //TODO register mappings via bool parameter
             //TODO make sure we do not kill appdata injection
@@ -51,6 +53,7 @@ namespace Serilog
             //Deal with positional formatting in fields property  (default to scalar string in mapping)
             options = options ?? new ElasticsearchSinkOptions(new [] { new Uri("http://localhost:9200") });
             var sink = new ElasticsearchSink(options);
+            sink.RegisterTemplateIfNeeded();
             return loggerSinkConfiguration.Sink(sink, options.MinimumLogEventLevel ?? LevelAlias.Minimum);
         }
     }

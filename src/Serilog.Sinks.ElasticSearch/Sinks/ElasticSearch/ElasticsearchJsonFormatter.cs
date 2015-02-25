@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
@@ -135,8 +136,10 @@ namespace Serilog.Sinks.ElasticSearch
                 this.WriteExceptionSerializationInfo(exception.InnerException, ref delim, output, ++depth);
         }
 
+        private void WriteStructuredExceptionMethod(string exceptionMethodString, ref string delim, TextWriter output)
+        {
+            if (string.IsNullOrWhiteSpace(exceptionMethodString)) return;
 
-        private void WriteStructuredExceptionMethod(string exceptionMethodString, ref string delim, TextWriter output) {
             var args = exceptionMethodString.Split('\0', '\n');
 
             if (args.Length!=5) return;
@@ -159,6 +162,7 @@ namespace Serilog.Sinks.ElasticSearch
             this.WriteJsonProperty("ClassName", className, ref delim, output);
             this.WriteJsonProperty("Signature", signature, ref delim, output);
             this.WriteJsonProperty("MemberType", memberType, ref delim, output);
+            
             output.Write("}");
             delim = ",";
         }
